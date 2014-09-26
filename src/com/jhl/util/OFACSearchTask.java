@@ -1,6 +1,6 @@
 package com.jhl.util;
 
-import com.google.common.collect.MapMaker;
+import com.google.common.collect.Lists;
 import org.openqa.selenium.By;
 import org.openqa.selenium.NoSuchElementException;
 import org.openqa.selenium.WebDriver;
@@ -9,7 +9,6 @@ import org.openqa.selenium.htmlunit.HtmlUnitDriver;
 import org.openqa.selenium.support.ui.Select;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.RecursiveTask;
 import java.util.concurrent.TimeUnit;
 
@@ -17,50 +16,48 @@ import java.util.concurrent.TimeUnit;
  * User: jolee
  * Date: 9/24/14
  */
-public class OFACSearchTask extends RecursiveTask<ConcurrentMap<String, List>> {
+public class OFACSearchTask extends RecursiveTask<Hashtable<String, List>> {
     private static final int MAX_NAME_THRESHOLD = 3;
     private static final String URL = "http://sdnsearch.ofac.treas.gov/";
     private static final String TYPE = "Individual";
     private static final String MIN_SCORE = "85";
     private static final int WAIT_TIME = 0;
+    private static List<String> listOfNames = null;
     private WebDriver driver = null;
     private int numOfNamesToSearch;
-    private ConcurrentMap<String, List> concurrentResultMap = null;
+    private Hashtable<String, List> searchResult;
 
     public OFACSearchTask(List<String> names) {
-        setConcurrentMap(names);
+        listOfNames = names;
+        numOfNamesToSearch = listOfNames.size();
+        searchResult = new Hashtable<>(numOfNamesToSearch);
     }
 
     @Override
-    protected ConcurrentMap<String, List> compute() {
+    protected Hashtable<String, List> compute() {
         if (numOfNamesToSearch <= MAX_NAME_THRESHOLD) {
-            for (Map.Entry<String, List> entry : concurrentResultMap.entrySet()) {
+            for (String name : listOfNames) {
                 driver = new HtmlUnitDriver();
                 driver.get(URL);
                 setLookupType();
                 setMinimumScore();
-                setSearchName(entry.getKey());
-                entry.setValue(searchAndGetOFACSearchResult());
+                setSearchName(name);
+                searchResult.put(name, searchAndGetOFACSearchResult());
             }
-            return concurrentResultMap;
+            return searchResult;
         } else {
-            String[] names = concurrentResultMap.keySet().toArray(new String[0]);
-            List<OFACSearchTask> forks = new LinkedList<OFACSearchTask>();
-
-            int split = (names.length / MAX_NAME_THRESHOLD) + (names.length % MAX_NAME_THRESHOLD);
-            int start = 0;
-            for (int i=0; i < split; i++) {
-                int end = (start + MAX_NAME_THRESHOLD > names.length ? names.length : start + MAX_NAME_THRESHOLD);
-                OFACSearchTask task = new OFACSearchTask(Arrays.asList(Arrays.copyOfRange(names, start, end)));
-                start = end;
+            List<OFACSearchTask> forks = new LinkedList<>();
+            List<List<String>> partition = Lists.partition(listOfNames, MAX_NAME_THRESHOLD);
+            partition.parallelStream().forEach(n -> {
+                OFACSearchTask task = new OFACSearchTask(n);
                 forks.add(task);
                 task.fork();
-            }
+            });
 
             for (OFACSearchTask task : forks) {
-                concurrentResultMap.putAll(task.join());
+                searchResult.putAll(task.join());
             }
-            return concurrentResultMap;
+            return searchResult;
         }
     }
 
@@ -78,14 +75,6 @@ public class OFACSearchTask extends RecursiveTask<ConcurrentMap<String, List>> {
     private void setSearchName(String name) {
         WebElement element = driver.findElement(By.id("ctl00_MainContent_txtLastName"));
         element.sendKeys(name);
-    }
-
-    private void setConcurrentMap(List<String> names) {
-        numOfNamesToSearch = names.size();
-        concurrentResultMap = new MapMaker().concurrencyLevel(MAX_NAME_THRESHOLD).makeMap();
-        for (String name : names) {
-            concurrentResultMap.put(name, new ArrayList());
-        }
     }
 
     private List<OFACSearchResult> searchAndGetOFACSearchResult() {

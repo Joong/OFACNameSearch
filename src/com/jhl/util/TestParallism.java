@@ -19,7 +19,10 @@ public class TestParallism {
 //        });
 
         List<String> namesToSearch = Files.readLines(new File("/Users/jolee/Downloads/lotsofnames"), Charset.defaultCharset());
-        namesToSearch.parallelStream().forEach(s -> System.out.println(s));
+        //namesToSearch.parallelStream().forEach(s -> System.out.println(s));
+        System.out.println(namesToSearch.size());
+        namesToSearch.subList(10, 20);
+        System.out.println(namesToSearch.size());
     }
 
     public static void main(String[] args) throws Exception {
