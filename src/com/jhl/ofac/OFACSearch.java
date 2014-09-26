@@ -1,10 +1,7 @@
-package com.jhl.util;
+package com.jhl.ofac;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.io.Files;
 
-import java.io.File;
-import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.Hashtable;
 import java.util.List;

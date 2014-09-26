@@ -1,4 +1,4 @@
-package com.jhl.util;
+package com.jhl.ofac;
 
 import com.google.common.collect.Lists;
 import org.openqa.selenium.By;
