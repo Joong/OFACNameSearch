@@ -1,7 +1,10 @@
 package com.jhl.ofac;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.io.Files;
 
+import java.io.File;
+import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.Hashtable;
 import java.util.List;
@@ -18,10 +21,10 @@ public class OFACSearch {
 
 
     public static void main(String[] args) throws Exception {
-        //List<String> namesToSearch = Files.readLines(new File(args[0]), Charset.defaultCharset());
+        List<String> namesToSearch = Files.readLines(new File(args[0]), Charset.defaultCharset());
         int processors = Runtime.getRuntime().availableProcessors();
         //System.out.println(Integer.toString(processors) + " processor" + (processors != 1 ? "s are " : " is ") + "available");
-        OFACSearchTask task = new OFACSearchTask(ImmutableList.copyOf(KNOWN_NAMES));
+        OFACSearchTask task = new OFACSearchTask(ImmutableList.copyOf(namesToSearch));
 
         ForkJoinPool pool = new ForkJoinPool(processors);
         long startTime = System.currentTimeMillis();
